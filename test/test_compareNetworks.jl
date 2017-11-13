@@ -9,7 +9,11 @@ if !isdefined(:doalltests) doalltests = false; end
 #----------------------------------------------------------#
 @testset "testing deleteHybridEdge!" begin
 
-if doalltests
+net = readTopology("(((A:4.0,(B:1.0)#H1:1.1::0.9):0.5,(C:0.6,#H1:1.0::0.1):1.0):3.0,D:5.0);")
+deleteHybridEdge!(net, net.edge[6];keepHybrid=true)
+@test writeTopologyLevel1(net) == "(((A:4.0,(B:2.1)#H1:1.1::0.9):0.5,(C:0.6,#H1:1.0::0.1):1.0):3.0,D:5.0);"
+
+if (doalltests)
 # example of network with one hybrid edge connected to the root:
 net = readTopology("((Adif:1.0,(Aech:0.122,#H6:10.0::0.047):10.0):1.614,Aten:1.0,((Asub:1.0,Agem:1.0):0.0)#H6:5.062::0.953);");
 # plot(net, showEdgeNumber=true, showNodeNumber=true)

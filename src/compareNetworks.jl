@@ -310,7 +310,7 @@ function displayedNetworks!(net::HybridNetwork, node::Node)
 end
 
 """
-`displayedTrees(net::HybridNetwork, gamma::Float64)`
+`displayedTrees(net::HybridNetwork, gamma::Float64; keepHybrid=true::Bool)`
 
 Warning: assumes correct isMajor attributes.
 
@@ -318,12 +318,16 @@ Extracts all trees displayed in a network, following hybrid edges
 with heritability >= gamma threshold (or >0.5 if threshold=0.5)
 and ignoring any hybrid edge with heritability lower than gamma.
 Returns an array of trees, as HybridNetwork objects.
+
+# Arguments
+
+- keepHybrid: if true, keep all nodes and edges associated with hybridization even.
 """
-function displayedTrees(net0::HybridNetwork, gamma::Float64)
+function displayedTrees(net0::HybridNetwork, gamma::Float64; keepHybrid=true::Bool)
     trees = HybridNetwork[]
     net = deepcopy(net0)
     deleteHybridThreshold!(net,gamma)
-    displayedTrees!(trees,net)
+    displayedTrees!(trees,net;keepHybrid)
     return trees # should have length 2^net.numHybrids
 end
 
@@ -339,7 +343,7 @@ majorTree(net::HybridNetwork) = displayedTrees(net,0.5)[1]
 
 
 # expands current list of trees, with trees displayed in a given network
-function displayedTrees!(trees::Array{HybridNetwork,1},net::HybridNetwork)
+function displayedTrees!(trees::Array{HybridNetwork,1},net::HybridNetwork;keepHybrid=true::Bool)
     if (isTree(net))
         for e in net.edge
             e.containRoot = true # ideally, this should be transferred to deleteHybridEdge!.
