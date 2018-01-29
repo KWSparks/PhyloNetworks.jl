@@ -259,17 +259,23 @@ end
 
 
 """
-`deleteHybridThreshold!(net::HybridNetwork,gamma::Float64)`
+`deleteHybridThreshold!(net::HybridNetwork,gamma::Float64,keepNodes=false)`
 
 Deletes from a network all hybrid edges with heritability below a threshold gamma.
 Returns the network.
 
-- if gamma<0.5: deletes     minor hybrid edges with gamma value <  threshold
+- if gamma<0.5: deletes minor hybrid edges with gamma value <  threshold
 - if gamma=0.5: deletes all minor hybrid edges (i.e gamma value <= threshold)
 
-Warning: assumes correct isMajor attributes.
+- keepNodes: if true, keep all nodes associated with hybrid edges.
+
+# Warnings
+
+- if keepNodes: partner hybrid edges have gamma values unchanged
+- assumes correct isMajor attributes.
+- assumes correct isMajor attributes.
 """
-function deleteHybridThreshold!(net::HybridNetwork,gamma::Float64)
+function deleteHybridThreshold!(net::HybridNetwork,gamma::Float64,keepNodes=false::Bool)
     gamma <= 0.5 || error("deleteHybridThreshold! called with gamma = $(gamma)>0.5")
     for i = net.numHybrids:-1:1
     # starting from last because net.hybrid changes as hybrids are removed. Empty range if 0 hybrids.
@@ -279,7 +285,7 @@ function deleteHybridThreshold!(net::HybridNetwork,gamma::Float64)
         if(hybedges[2].gamma < gamma || gamma == 0.5)
             # deleteHybrid!(net.hybrid[i],net,true,false) # requires non-missing edge lengths
             # deleteHybridizationUpdate! requires level-1 network with corresponding attributes
-            deleteHybridEdge!(net, hybedges[2]) # does not update inCycle, containRoot, etc.
+            deleteHybridEdge!(net, hybedges[2],keepNodes) # does not update inCycle, containRoot, etc.
         end
     end
     return net
@@ -294,40 +300,41 @@ deleting either one or the other parent hybrid edge.
 - the original network is modified: the minor edge removed.
 - returns one HybridNetwork object: the network with the major edge removed
 """
-function displayedNetworks!(net::HybridNetwork, node::Node)
+function displayedNetworks!(net::HybridNetwork, node::Node, keepNodes=false::Bool)
     node.hybrid || error("will not extract networks from tree node $(node.number)")
     ind = getIndex(node,net)
     netmin = deepcopy(net)
     hybedges = hybridEdges(node)
     majorgamma = hybedges[1].gamma
     # deleteHybrid!(  net.node[ind],net  ,true,false)
-    deleteHybridEdge!(net   , hybedges[2]) # does not update inCycle, containRoot, etc.
+    deleteHybridEdge!(net   , hybedges[2],keepNodes) # does not update inCycle, containRoot, etc.
     hybedges = hybridEdges(netmin.node[ind]) # hybrid edges in netmin
-    deleteHybridEdge!(netmin, hybedges[1])
+    deleteHybridEdge!(netmin, hybedges[1],keepNodes)
     #setGamma!(hybedges[2],majorgamma) # set major gamma to minor edge (to delete old major = new minor)
     #deleteHybrid!(netmin.node[ind],netmin,true,false)
     return netmin
 end
 
 """
-`displayedTrees(net::HybridNetwork, gamma::Float64; keepHybrid=true::Bool)`
-
-Warning: assumes correct isMajor attributes.
+`displayedTrees(net::HybridNetwork, gamma::Float64; keepNodes=false::Bool)`
 
 Extracts all trees displayed in a network, following hybrid edges
 with heritability >= gamma threshold (or >0.5 if threshold=0.5)
 and ignoring any hybrid edge with heritability lower than gamma.
 Returns an array of trees, as HybridNetwork objects.
 
-# Arguments
+- keepNodes: if true, keep all nodes associated with hybrid edges.
 
-- keepHybrid: if true, keep all nodes and edges associated with hybridization even.
+# Warnings
+
+- if keepNodes: partner hybrid edges have gamma values unchanged
+- assumes correct isMajor attributes.
 """
-function displayedTrees(net0::HybridNetwork, gamma::Float64; keepHybrid=true::Bool)
+function displayedTrees(net0::HybridNetwork, gamma::Float64; keepNodes=false::Bool)
     trees = HybridNetwork[]
     net = deepcopy(net0)
-    deleteHybridThreshold!(net,gamma)
-    displayedTrees!(trees,net;keepHybrid)
+    deleteHybridThreshold!(net,gamma,keepNodes)
+    displayedTrees!(trees,net,keepNodes)
     return trees # should have length 2^net.numHybrids
 end
 
@@ -343,7 +350,7 @@ majorTree(net::HybridNetwork) = displayedTrees(net,0.5)[1]
 
 
 # expands current list of trees, with trees displayed in a given network
-function displayedTrees!(trees::Array{HybridNetwork,1},net::HybridNetwork;keepHybrid=true::Bool)
+function displayedTrees!(trees::Array{HybridNetwork,1},net::HybridNetwork,keepNodes=false::Bool)
     if (isTree(net))
         for e in net.edge
             e.containRoot = true # ideally, this should be transferred to deleteHybridEdge!.
@@ -354,9 +361,9 @@ function displayedTrees!(trees::Array{HybridNetwork,1},net::HybridNetwork;keepHy
         end
         push!(trees, net)
     else
-        netmin = displayedNetworks!(net,net.hybrid[1])
-        displayedTrees!(trees,net)
-        displayedTrees!(trees,netmin)
+        netmin = displayedNetworks!(net,net.hybrid[1],keepNodes)
+        displayedTrees!(trees,net,keepNodes)
+        displayedTrees!(trees,netmin,keepNodes)
     end
 end
 
@@ -367,11 +374,11 @@ Warning: assumes correct isMajor attributes.
 
 Extracts the tree displayed in the network, following the major hybrid edge at each hybrid node, except at the ith hybrid node (i=hybindex), where the minor hybrid edge is kept instead of the major hybrid edge.
 """
-function minorTreeAt(net::HybridNetwork, hybindex::Integer)
+function minorTreeAt(net::HybridNetwork, hybindex::Integer, keepNodes=false::Bool)
     hybindex <= length(net.hybrid) || error("network has fewer hybrid nodes than index $(hybindex).")
     tree = deepcopy(net)
     hybedges = hybridEdges(tree.hybrid[hybindex])
-    deleteHybridEdge!(tree, hybedges[2])
+    deleteHybridEdge!(tree, hybedges[2],keepNodes)
     # majorgamma = hybedges[1].gamma
     # setGamma!(hybedges[2],majorgamma) # set major gamma to minor edge (to delete old major = new minor)
     # deleteHybrid!(tree.hybrid[hybindex],tree,true,false) # major edge at hybrid removed.
@@ -385,14 +392,14 @@ Warning: assumes correct isMajor attributes.
 
 Deletes all the minor hybrid edges, except at input node. The network is left with a single hybridization, and otherwise displays the same major tree as before.
 """
-function displayedNetworkAt!(net::HybridNetwork, node::Node)
+function displayedNetworkAt!(net::HybridNetwork, node::Node, keepNodes=false::Bool)
     node.hybrid || error("will not extract network from tree node $(node.number)")
     for i = net.numHybrids:-1:1
     # starting from last because net.hybrid changes as hybrids are removed. Empty range if 0 hybrids.
         net.hybrid[i] != node || continue
         # deleteHybridizationUpdate!(net,net.hybrid[i],false,false)
         hybedges = hybridEdges(net.hybrid[i])
-        deleteHybridEdge!(net, hybedges[2])
+        deleteHybridEdge!(net, hybedges[2],keepNodes)
     end
 end
 

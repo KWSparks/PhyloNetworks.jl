@@ -10,8 +10,10 @@ if !isdefined(:doalltests) doalltests = false; end
 @testset "testing deleteHybridEdge!" begin
 
 net = readTopology("(((A:4.0,(B:1.0)#H1:1.1::0.9):0.5,(C:0.6,#H1:1.0::0.1):1.0):3.0,D:5.0);")
-deleteHybridEdge!(net, net.edge[6];keepHybrid=true)
-@test writeTopologyLevel1(net) == "(((A:4.0,(B:2.1)#H1:1.1::0.9):0.5,(C:0.6,#H1:1.0::0.1):1.0):3.0,D:5.0);"
+deleteHybridEdge!(net, net.edge[6], true);
+@test writeTopology(net) == "(((A:4.0,(B:1.0):1.1):0.5,(C:0.6):1.0):3.0,D:5.0);"
+@test net.edge[3].gamma == 0.9
+@test net.node[3].name == "#H1"
 
 if (doalltests)
 # example of network with one hybrid edge connected to the root:
@@ -191,6 +193,12 @@ a = displayedTrees(net5, 0.1);
 @test writeTopologyLevel1(a[4]) == "(A:1.0,((B:1.1,D:1.0):1.2,((F:0.7,E:0.51):0.8,C:1.12):2.2):0.7);"
 
 end # of testset, displayedNetworks! & displayedTrees
+ net = readTopology("(((A:4.0,(B:1.0)#H1:1.1::0.9):0.5,(C:0.6,#H1:1.0::0.1):1.0):3.0,D:5.0);")
+ trees = displayedTrees(net,0.0;keepHybrid=true)
+ @test writeTopology(trees[1])=="(((A:4.0,(B:1.0):1.1):0.5,(C:0.6):1.0):3.0,D:5.0);"
+ @test writeTopology(trees[2])=="(((A:4.0):0.5,(C:0.6,(B:1.0):1.0):1.0):3.0,D:5.0);"
+
+ println("Testing majorTree and displayedNetworkAt!")
 
 @testset "testing majorTree and displayedNetworkAt!" begin
 

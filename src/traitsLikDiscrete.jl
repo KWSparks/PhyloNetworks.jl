@@ -7,16 +7,17 @@ net = readTopology("(((A:4.0,(B:1.0)#H1:1.1::0.9):0.5,(C:0.6,#H1:1.0::0.1):1.0):
 tips = Dict("A" => 0, "B" => 0, "C" => 1, "D" => 1)
 
 """
-    tree_corelikelihood(tree, tips, logtrans)
+    discrete_tree_corelikelihood(tree, tips, logtrans)
 
 Calculate likelihood of discrete character states on a phylogenetic network given
 starting states.
 
 """
-function tree_corelikelihood(tree::HybridNetwork, tips::Dict{String,Int64}, logtrans::Array{Matrix{Float64}(size(k),size(k))}(length(net.edge)))    
+function discrete_tree_corelikelihood(tree::HybridNetwork, tips::Dict{String,Int64},
+    logtrans::AbstractArray, fixit
     forwardlik = Array{Array{Float64, 1}(size(net.node))}(size(k))
     directlik = Array{Array{Float64, 1}(size(net.edge))}(size(k))
-    backwardlik = Array{Array{Float64, 1}(size(net.node))}(size(k))
+    backwardlik = Array{Array{Float64, 1}(size(net.node))}(size(k)))
     for i in reverse(1:length(tree.nodes_changed)) # post-order
         n = tree.nodes_changed[i]
         if n.leaf
@@ -29,7 +30,7 @@ function tree_corelikelihood(tree::HybridNetwork, tips::Dict{String,Int64}, logt
                     if i = tips(n.name)
                         forwardlik[i,n]
                     else
-                        forwardlik[i,n] = -Inf #Fixit: -Inf32 ?
+                        forwardlik[i,n] = -Inf64
                     end
                 end
             end
@@ -91,63 +92,71 @@ function tree_corelikelihood(tree::HybridNetwork, tips::Dict{String,Int64}, logt
 end
 
 """
-    network_corelikelihood(tips, mod, trees, ltw)
+    discrete_corelikelihood(tips, mod, trees, ltw,
+        logtrans,forwardlik,directlik,backwardlik)
 
-Calculate likelihood for discrete characters on a network.
+Calculate likelihood for discrete characters on a network,
+using fixed model parameters
 
 # Examples
 
 """
 
-function network_corelikelihood(tips::Dict{String,Int64}, mod::TraitSubstitutionModel, trees::Array{HybridNetwork}, ltw)
-    ll = 0
-    f(t) = tree_corelikelihood(trees[t],view(mlik,:,:,t))
-    pmap(f, 1:length(trees))
-    for t in trees
-        if t=1
-            ll = mlik[1, root, t] + ltw[1]
-        else
-            ll = logsumexp(ll, mlik[1, root, t] + ltw[t])
-    return ll
+function discrete_corelikelihood(tips::Dict{String,Int64}, mod::TraitSubstitutionModel,
+    trees::Array{HybridNetwork}, ltw::AbstractVector, logtrans::AbstractArray,
+    forwardlik::AbstractArray, directlik::AbstractArray, backwardlik::AbstractArray)
+    f(t) = discrete_tree_corelikelihood(trees[t],logtrans,view(forwardlik,:,:,t),
+             view(directlik,:,:,t),view(backwardlik,:,:,t))
+    ll = pmap(f, 1:length(trees)) # ll = loglikelihood given each tree
+    @show ll
+    res = ll[1] + ltw[1] # result: loglikelihood given the network
+    @show res
+    for t in 2:length(trees)
+        res = logsumexp(res, ll[t] + ltw[t])
+    end
+    return res
 end
 
 """
-    network_calculatelikelihood(tips, mod, net)
+    discrete_optimlikelihood(tips, mod, net)
 
 Calculate likelihood of discrete character states on a reticulate network.
 
 # Examples
 """
 
-function network_calculatelikelihood(tips::Dict{Int64,Set{T}}, mod::SM, net::HybridNetwork)
+function discrete_optimlikelihood(tips::Dict{Int64,Set{T}}, mod::SM, net::HybridNetwork)
     trees = displayedTrees(net, 0.0)
+    ntrees = length(trees)
     k = nStates(mod)
     #both mlik and logtrans should be 3-d arrays
     #mlik[i,n,t] = log P{data below n in tree t given state i above n}
-    #re-number edges to be consective, positive numbers; check edges are positive numbers
+    # fixit: re-number edges to be consective, positive numbers; check edges are positive numbers
     #keep track of largest edge number
     #initialize 3d array: Array{Float64}((i,j,e))
-    mlik = Array{Array{Float64, 1}(size(net.node))}(size(k))
+    # fixit: later change the arrays below into SharedArray
+    forwardlik = Array{Float64}(k,size(net.node),ntrees)
+    directlik  = Array{Float64}(k,size(net.edge),ntrees)
+    backwardlik= Array{Float64}(k,size(net.node),ntrees)
     #logtrans[i,j,e]; i = start_state, j = end_state, e = edge.number
-    logtrans = Array{Matrix{Float64}(size(k),size(k))}(length(net.edge))
     log_tree_weights = Array{Float64,1}
-    ltw = 0.0
     #Step 1
     for tree in trees
+        ltw = 0.0
         for e in tree.edge
             if e.gamma != 1.0
                 ltw += log(e.gamma)
             end
         end
         push!(log_tree_weights,ltw)
-        ltw = 0.0
     end
     #Step 2
+    logtrans = Array{Float64}(k,k,length(net.edge))
     for edge in net.edge
         logtrans[:,:,edge.number] = log(P(mod,edge.length)) # element-wise
     end
     #Step 3
-    network_corelikelihood(tips,mod,net)
+    discrete_corelikelihood(tips,mod,trees,ltw,logtrans,forwardlik,directlik,backwardlik)
     #fixme: add optimization routine
     return
 end
