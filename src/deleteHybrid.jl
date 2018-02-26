@@ -289,7 +289,7 @@ end
 deleteHybrid!(node::Node,net::HybridNetwork,minor::Bool) = deleteHybrid!(node,net,minor, false)
 
 """
-`deleteHybridEdge!(net::HybridNetwork,edge::Edge;keepNodes::false)`
+`deleteHybridEdge!(net::HybridNetwork,edge::Edge,keepNodes::false)`
 
 Deletes a hybrid edge from a network. The network does not have to be of level 1,
 and may contain some polytomies. Updates branch lengths, allowing for missing values.
@@ -346,11 +346,14 @@ function deleteHybridEdge!(net::HybridNetwork,edge::Edge, keepNodes=false::Bool)
             end
         end
     else # n1 has 4+ edges (polytomy) or 3 edges but we want to keep it anyway:
-        # keep n1 but detach it from 'edge', set its remaining parent to tree edge
+        # keep n1 but detach it from 'edge', set its remaining parent to major tree edge
         for e in n1.edge
             if (e.hybrid && e!=edge && n1==e.node[e.isChild1?1:2])
                 # e = partner of edge to be deleted
                 e.hybrid=false
+                if !e.isMajor
+                    e.isMajor=true
+                end
                 # change its gamma to 1.0 also??
                 break
             end

@@ -292,13 +292,16 @@ function deleteHybridThreshold!(net::HybridNetwork,gamma::Float64,keepNodes=fals
 end
 
 """
-    displayedNetworks!(net::HybridNetwork, node::Node)
+    displayedNetworks!(net::HybridNetwork, node::Node, keepNode=false)
 
 Extracts the two networks that simplify a given network at a given hybrid node:
 deleting either one or the other parent hybrid edge.
 
 - the original network is modified: the minor edge removed.
 - returns one HybridNetwork object: the network with the major edge removed
+
+- keepNodes: if true, keep all nodes associated with hybrid edges.
+
 """
 function displayedNetworks!(net::HybridNetwork, node::Node, keepNodes=false::Bool)
     node.hybrid || error("will not extract networks from tree node $(node.number)")
@@ -327,7 +330,8 @@ Returns an array of trees, as HybridNetwork objects.
 
 # Warnings
 
-- if keepNodes: partner hybrid edges have gamma values unchanged
+- if keepNodes: partner hybrid edges have gamma values unchanged but `isMajor` 
+is changed to true
 - assumes correct isMajor attributes.
 """
 function displayedTrees(net0::HybridNetwork, gamma::Float64; keepNodes=false::Bool)
