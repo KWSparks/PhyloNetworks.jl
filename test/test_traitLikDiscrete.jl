@@ -94,11 +94,11 @@ end
 
 @testset "Testing on network with no hybridizations" begin
 
-net = PhyloNetworks.readTopology("(A:3.0,(B:2.0,(C:1.0,D:1.0):1.0):1.0);")
+net = readTopology("(A:3.0,(B:2.0,(C:1.0,D:1.0):1.0):1.0);")
 tips = Dict("A" => 0, "B" => 0, "C" => 1, "D" => 1)
 m1 = BinaryTraitSubstitutionModel(1.0,2.0)
 
-PhyloNetworks.discrete_optimlikelihood(tips, m1, net)
+discrete_optimlikelihood(tips, m1, net)
 
 end #testset for tree
 
@@ -108,7 +108,7 @@ end #testset for tree
 net = readTopology("(((A:4.0,(B:1.0)#H1:1.1::0.9):0.5,(C:0.6,#H1:1.0::0.1):1.0):3.0,D:5.0);")
 tips = Dict("A" => 0, "B" => 0, "C" => 1, "D" => 1)
 
-discrete_optimlikelihood(tips, mod, net)
+discrete_optimlikelihood(tips, m1, net)
 
 end #end of testset for networks with single hybridization
 

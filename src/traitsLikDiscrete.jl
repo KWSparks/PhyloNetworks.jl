@@ -3,9 +3,6 @@ import PhyloNetworks.getIndex
 import PhyloNetworks.getOtherNode
 import PhyloNetworks.addBL
 
-net = readTopology("(((A:4.0,(B:1.0)#H1:1.1::0.9):0.5,(C:0.6,#H1:1.0::0.1):1.0):3.0,D:5.0);")
-tips = Dict("A" => 0, "B" => 0, "C" => 1, "D" => 1)
-
 """
     discrete_tree_corelikelihood(tree, tips, logtrans)
 
@@ -124,8 +121,9 @@ Calculate likelihood of discrete character states on a reticulate network.
 
 """
 
-function discrete_optimlikelihood(tips::Dict{Int64,Set{T}}, mod::SM, net::HybridNetwork)
+function discrete_optimlikelihood(tips::Dict{String,Int64}, mod::TraitSubstitutionModel, net::HybridNetwork)
     trees = displayedTrees(net, 0.0)
+    #tips::Dict{Int64,Set{T}}
     ntrees = length(trees)
     k = nStates(mod)
     #both mlik and logtrans should be 3-d arrays
