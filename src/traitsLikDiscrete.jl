@@ -122,7 +122,6 @@ end
 
 Calculate likelihood of discrete character states on a reticulate network.
 
-# Examples
 """
 
 function discrete_optimlikelihood(tips::Dict{Int64,Set{T}}, mod::SM, net::HybridNetwork)
@@ -160,3 +159,5 @@ function discrete_optimlikelihood(tips::Dict{Int64,Set{T}}, mod::SM, net::Hybrid
     #fixme: add optimization routine
     return
 end
+
+
