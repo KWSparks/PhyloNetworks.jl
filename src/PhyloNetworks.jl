@@ -145,5 +145,6 @@ module PhyloNetworks
     include("interop.jl")
     include("substitutionModels.jl")
     include("biconnectedComponents.jl")
+    include("traitsLikDiscrete.jl")
 
 end #module
