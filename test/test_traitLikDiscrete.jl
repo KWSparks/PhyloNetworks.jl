@@ -1,3 +1,12 @@
+using PhyloNetworks
+using Base.Test
+using RCall
+using StaticArrays
+using StatsFuns
+import PhyloNetworks.getIndex
+import PhyloNetworks.getOtherNode
+import PhyloNetworks.addBL
+
 runall = false;
 
 @testset "Testing Substitution Models, P and Q matrices" begin

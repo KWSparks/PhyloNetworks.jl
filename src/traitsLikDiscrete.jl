@@ -1,4 +1,5 @@
 using PhyloNetworks
+using StatsFuns
 import PhyloNetworks.getIndex
 import PhyloNetworks.getOtherNode
 import PhyloNetworks.addBL
@@ -12,9 +13,10 @@ starting states.
 """
 function discrete_tree_corelikelihood(tree::HybridNetwork, tips::Dict{String,Int64},
     logtrans::AbstractArray,
-    forwardlik = Array{Array{Float64, 1}(size(net.node))}(size(k)),
-    directlik = Array{Array{Float64, 1}(size(net.edge))}(size(k)),
-    backwardlik = Array{Array{Float64, 1}(size(net.node))}(size(k)))
+    forwardlik::AbstractArray,
+    directlik::AbstractArray,
+    backwardlik::AbstractArray)
+    loglik=0.0
     for i in reverse(1:length(tree.nodes_changed)) # post-order
         n = tree.nodes_changed[i]
         if n.leaf
@@ -62,9 +64,9 @@ function discrete_tree_corelikelihood(tree::HybridNetwork, tips::Dict{String,Int
             e1 = children[1]
             e2 = children[2]
             forwardlik[:,n] = directlik[:,e1] + directlik[:,e2]
-        ende.node[e.isChild1 ? 1 : 2]
+        end
     end
-    for n in net.nodes_changed
+    for n in tree.nodes_changed
         if n.root
             logprior = log(backwardlik[:,n])
         else
@@ -87,7 +89,6 @@ function discrete_tree_corelikelihood(tree::HybridNetwork, tips::Dict{String,Int
     return loglik
     #Fixit: ancestral state reconstruction at node n
 end
-end
 
 """
     discrete_corelikelihood(tips, mod, trees, ltw,
@@ -105,7 +106,8 @@ function discrete_corelikelihood(tips::Dict{String,Int64}, mod::TraitSubstitutio
     forwardlik::AbstractArray, directlik::AbstractArray, backwardlik::AbstractArray)
     ll = Array{Float64,1}(length(trees))
     for t in 1:length(trees)
-       discrete_tree_corelikelihood(trees[t],tips,logtrans,forwardlik[:,:,t],directlik[:,:,t],backwardlik[:,:,t])
+        ll[t] = discrete_tree_corelikelihood(trees[t],tips,logtrans,forwardlik[:,:,t],directlik[:,:,t],backwardlik[:,:,t])
+        @show ll
     end
     #f(t) = discrete_tree_corelikelihood(trees[t],tips,logtrans,view(forwardlik,:,:,t),
     #         view(directlik,:,:,t),view(backwardlik,:,:,t))
@@ -141,7 +143,7 @@ function discrete_optimlikelihood(tips::Dict{String,Int64}, mod::TraitSubstituti
     directlik  = Array{Float64}(k,length(net.edge),ntrees)
     backwardlik= Array{Float64}(k,length(net.node),ntrees)
     #logtrans[i,j,e]; i = start_state, j = end_state, e = edge.number
-    log_tree_weights = Array{Float64,1}()
+    log_tree_weights = Array{Float64,1}(length(trees))
     #Step 1
     ltw = Array{Float64,1}(length(trees))
     t = 0
@@ -150,10 +152,10 @@ function discrete_optimlikelihood(tips::Dict{String,Int64}, mod::TraitSubstituti
         ltw[t] = 0.0
         for e in tree.edge
             if e.gamma != 1.0
-                ltw += log(e.gamma)
+                ltw[t] += log(e.gamma)
             end
         end
-        push!(log_tree_weights,ltw[t])
+        log_tree_weights[t] = ltw[t]
     end
     #Step 2
     logtrans = Array{Float64}(k,k,length(net.edge))
