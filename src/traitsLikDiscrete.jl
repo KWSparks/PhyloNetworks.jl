@@ -1,9 +1,3 @@
-using PhyloNetworks
-using StatsFuns
-import PhyloNetworks.getIndex
-import PhyloNetworks.getOtherNode
-import PhyloNetworks.addBL
-
 """
     discrete_tree_corelikelihood(tree, tips, logtrans, forwardlik, directlik, backwardlik)
 
@@ -26,8 +20,8 @@ function discrete_tree_corelikelihood(tree::HybridNetwork, tips::Dict{String,Int
                 end
             else
                 for i in 1:k
-                    if i == tips(n.name)
-                        forwardlik[i,n]
+                    if i == tips[n.name]
+                        forwardlik[i,n] = 0.0
                     else
                         forwardlik[i,n] = -Inf64
                     end
@@ -40,17 +34,16 @@ function discrete_tree_corelikelihood(tree::HybridNetwork, tips::Dict{String,Int
                     loglik = tmp
                 elseif i > 1
                     loglik = logsumexp(loglik, tmp)
-                else
-                    for e in n.edge
-                        pe = e.isChild1 ? 1 : 2
-                    end
-                    lt = logtrans[:,:,e]
-                    directlik[:,e] = logtrans[:,1,e] + forwardlik[1,n]
-                    for i in 1:k
-                        for j in 2:k
-                            tmp = logtrans[i,j,e] + forwardlik[j,n]
-                            directlik[i,e] = logsumexp(directlik[i,e],tmp)
-                        end
+                end
+                for e in n.edge
+                    pe = e.isChild1 ? 1 : 2
+                end
+                lt = logtrans[:,:,e]
+                directlik[:,e] = logtrans[:,1,e] + forwardlik[1,n]
+                for i in 1:k
+                    for j in 2:k
+                        tmp = logtrans[i,j,e] + forwardlik[j,n]
+                        directlik[i,e] = logsumexp(directlik[i,e],tmp)
                     end
                 end
             end

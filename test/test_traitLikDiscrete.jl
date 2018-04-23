@@ -1,12 +1,3 @@
-using PhyloNetworks
-using Base.Test
-using RCall
-using StaticArrays
-using StatsFuns
-import PhyloNetworks.getIndex
-import PhyloNetworks.getOtherNode
-import PhyloNetworks.addBL
-
 runall = false;
 
 @testset "Testing Substitution Models, P and Q matrices" begin
@@ -103,7 +94,7 @@ end
 
 @testset "Testing on network with no hybridizations" begin
 
-net = PhyloNetworks.readTopology("(A:3.0,(B:2.0,(C:1.0,D:1.0):1.0):1.0);")
+net = readTopology("(A:3.0,(B:2.0,(C:1.0,D:1.0):1.0):1.0);")
 tips = Dict("A" => 0, "B" => 0, "C" => 1, "D" => 1)
 m1 = BinaryTraitSubstitutionModel(1.0,2.0)
 

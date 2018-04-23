@@ -14,6 +14,8 @@ module PhyloNetworks
     using IterTools
     using BioSequences
     using BioSymbols
+    using StaticArrays
+    using StatsFuns
 
     import Base.show
     import GLM.ftest
@@ -121,7 +123,10 @@ module PhyloNetworks
         nStates,
         Q, P,
         randomTrait,
-        randomTrait!
+        randomTrait!,
+        getIndex,
+        getOtherNode,
+        addBL
 
     include("types.jl")
     include("auxiliary.jl")
