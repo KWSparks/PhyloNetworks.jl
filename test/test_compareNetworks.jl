@@ -148,8 +148,6 @@ writeTopologyLevel1(net42) == "(A:1.0,((C:0.9,D:1.1):1.3,B:2.3):0.7);" ||
  error("deleteHybridThreshold! didn't work on net42, gamma=0.5")
 end
 
-end # of testset deleteHybridThreshold!
-
 net5 = readTopology("(A:1.0,((B:1.1,#H1:0.2::0.2):1.2,(((C:0.52,(E:0.5)#H2:0.02::0.7):0.6,(#H2:0.01::0.3,F:0.7):0.8):0.9,(D:0.8)#H1:0.3::0.8):1.3):0.7):0.1;");
 # plot(net5)
 @test_nowarn deleteHybridThreshold!(net5,0.5);  # both H1 and H2 eliminated
@@ -282,9 +280,6 @@ phy10= readTopology("((t4:0.1083955287,((t1:0.8376079942,t8:0.1745392387):0.6178
 # or: wrong RF distance between some of the trees
 
 end # of testset, tree2Matrix
-
-
-end #of testset tree2Matrix
 
 #----------------------------------------------------------#
 #   testing function to compare networks                   #
