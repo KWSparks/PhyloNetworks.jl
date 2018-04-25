@@ -124,8 +124,6 @@ module PhyloNetworks
         Q, P,
         randomTrait,
         randomTrait!,
-        getIndex,
-        getOtherNode,
         addBL
 
     include("types.jl")
