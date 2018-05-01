@@ -92,16 +92,18 @@ if runall
     a[:, 6] == a[:, 9] # true: major hybrid parent node = leaf A
 end
 
+end
+
 @testset "Testing on network with no hybridizations" begin
 
 net = readTopology("(A:3.0,(B:2.0,(C:1.0,D:1.0):1.0):1.0);")
-tips = Dict("A" => 0, "B" => 0, "C" => 1, "D" => 1)
+tips = Dict("A" => 1, "B" => 1, "C" => 2, "D" => 2)
+# fixit try with with wrapper function that takes formats 
 m1 = BinaryTraitSubstitutionModel(1.0,2.0)
 
 PhyloNetworks.discrete_optimlikelihood(tips, m1, net)
 
 end #testset for tree
-
 
 @testset "Testing on network with single hybridization" begin
 
@@ -111,5 +113,3 @@ tips = Dict("A" => 0, "B" => 0, "C" => 1, "D" => 1)
 PhyloNetworks.discrete_optimlikelihood(tips, m1, net)
 
 end #end of testset for networks with single hybridization
-
-end

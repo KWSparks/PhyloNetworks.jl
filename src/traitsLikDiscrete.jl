@@ -1,67 +1,76 @@
 """
-    discrete_tree_corelikelihood(tree, tips, logtrans, forwardlik, directlik, backwardlik)
+    discrete_tree_corelikelihood(tree, tips, logtrans, forwardlik, directlik)
 
 Calculate likelihood of discrete character states on a phylogenetic network given
 starting states.
 
 """
 function discrete_tree_corelikelihood(tree::HybridNetwork, tips::Dict{String,Int64},
-    logtrans::AbstractArray,
-    forwardlik::AbstractArray,
-    directlik::AbstractArray,
-    backwardlik::AbstractArray)
-    loglik=0.0
-    for i in reverse(1:length(tree.nodes_changed)) # post-order
-        n = tree.nodes_changed[i]
+    logtrans::AbstractArray, forwardlik::AbstractArray, directlik::AbstractArray)
+    k=size(logtrans)[1]
+    for ni in reverse(1:length(tree.nodes_changed)) # post-order
+        n = tree.nodes_changed[ni]
         if n.leaf
-            if !keys(n.name) #if tip name is not a key in dictionary
+            # assumes that forwardlik was initialized at 0.0
+            tiplabel = n.name
+            if haskey(tips, tiplabel)
                 for i in 1:k
-                    forwardlik[i,n] = 0.0 
+                    forwardlik[i,ni] = -Inf64
                 end
-            else
-                for i in 1:k
-                    if i == tips[n.name]
-                        forwardlik[i,n] = 0.0
-                    else
-                        forwardlik[i,n] = -Inf64
-                    end
-                end
-            end
-        elseif n.root
-            for i in 1:k
-                tmp = logprior[i] + forwardlik[i,n]
-                if i==1
-                    loglik = tmp
-                elseif i > 1
-                    loglik = logsumexp(loglik, tmp)
-                end
-                for e in n.edge
-                    pe = e.isChild1 ? 1 : 2
-                end
-                lt = logtrans[:,:,e]
-                directlik[:,e] = logtrans[:,1,e] + forwardlik[1,n]
-                for i in 1:k
-                    for j in 2:k
-                        tmp = logtrans[i,j,e] + forwardlik[j,n]
-                        directlik[i,e] = logsumexp(directlik[i,e],tmp)
-                    end
-                end
+                forwardlik[tips[n.name], ni] = 0.
             end
         else
-            children = []
             for e in n.edge
-                if e.node[e.isChild1 ? 1 : 2] == node continue; end
+                if n == getParent(e) 
+                    continue
+                end
                 # excluded parent edges only: assuming tree here
-                push!(children, e)
+                forwardlik[:,ni] += directlik[:,e.number]
             end
-            e1 = children[1]
-            e2 = children[2]
-            forwardlik[:,n] = directlik[:,e1] + directlik[:,e2]
+        end
+        if ni==1 # root is first index in nodes changed
+            logprior = [-log(k) for i in 1:k] # uniform prior; could be changed later based on user input
+            loglik = logprior[1] + forwardlik[1,ni] # log of prob of data AND root in state 1
+            for i in 2:k
+                loglik = logsumexp(loglik, logprior[i] + forwardlik[i,ni])
+            end
+            return loglik
+        end
+        # if we keep going: not the root
+        for e in n.edge
+            if n == getChild(e)
+                lt = view(logtrans, :,:,e.number)
+                directlik[:,e.number] = lt[:,1] + forwardlik[1,ni]
+                for i in 1:k # state at parent node
+                    for j in 2:k # j = state at node n
+                        tmp = lt[i,j] + forwardlik[j,ni]
+                        directlik[i,e.number] = logsumexp(directlik[i,e.number],tmp)
+                    end
+                end
+                break # we visited the parent edge: break out of for loop
+            end
         end
     end
+end
+
+"""
+    function discrete_tree_core_ancestralstate(tree, tips, logtrans, forwardlik, 
+        directlik, backwardlik)
+
+Ancestral state reconstruction at node n
+
+# Examples
+
+"""
+
+function discrete_tree_core_ancestralstate(tree::HybridNetwork, tips::Dict{String,Int64},
+    logtrans::AbstractArray, forwardlik::AbstractArray, directlik::AbstractArray,
+    backwardlik::AbstractArray)
+    #fixit pass k from k=nStates(mod)
+    k=size(logtrans)[1]
     for n in tree.nodes_changed
         if n.root
-            logprior = log(backwardlik[:,n])
+            backwardlik[:,n] = logprior # fixit: log prior is not yet defined
         else
             pn = n.isChild1 ? 1 : 2
             for e in n.edge
@@ -80,7 +89,6 @@ function discrete_tree_corelikelihood(tree::HybridNetwork, tips::Dict{String,Int
         end
     end
     return loglik
-    #Fixit: ancestral state reconstruction at node n
 end
 
 """
@@ -99,14 +107,15 @@ function discrete_corelikelihood(tips::Dict{String,Int64}, mod::TraitSubstitutio
     forwardlik::AbstractArray, directlik::AbstractArray, backwardlik::AbstractArray)
     ll = Array{Float64,1}(length(trees))
     for t in 1:length(trees)
-        ll[t] = discrete_tree_corelikelihood(trees[t],tips,logtrans,forwardlik[:,:,t],directlik[:,:,t],backwardlik[:,:,t])
-        @show ll
+        ll[t] = discrete_tree_corelikelihood(trees[t],tips,logtrans,
+                   view(forwardlik, :,:,t),view(directlik, :,:,t))
     end
     #f(t) = discrete_tree_corelikelihood(trees[t],tips,logtrans,view(forwardlik,:,:,t),
     #         view(directlik,:,:,t),view(backwardlik,:,:,t))
     #ll = pmap(f, 1:length(trees)) # ll = loglikelihood given each tree
-    #@show ll
+    @show ll
     res = ll[1] + ltw[1] # result: loglikelihood given the network
+    @show ltw[1]
     @show res
     for t in 2:length(trees)
         res = logsumexp(res, ll[t] + ltw[t])
@@ -119,10 +128,17 @@ end
 
 Calculate likelihood of discrete character states on a reticulate network.
 
+Tips should have values that are consecutive numbers
+
 """
 
 function discrete_optimlikelihood(tips::Dict{String,Int64}, mod::TraitSubstitutionModel, net::HybridNetwork)
+    # fixit new function to detect number of states, make model labels compatible with julia indexing
     trees = displayedTrees(net, 0.0)
+    for tree in trees
+        preorder!(tree)
+        directEdges!(tree)
+    end    
     #tips::Dict{Int64,Set{T}}
     ntrees = length(trees)
     k = nStates(mod)
@@ -132,11 +148,10 @@ function discrete_optimlikelihood(tips::Dict{String,Int64}, mod::TraitSubstituti
     #keep track of largest edge number
     #initialize 3d array: Array{Float64}((i,j,e))
     # fixit: later change the arrays below into SharedArray
-    forwardlik = Array{Float64}(k,length(net.node),ntrees)
-    directlik  = Array{Float64}(k,length(net.edge),ntrees)
+    forwardlik = zeros(Float64, k,length(net.node),ntrees)
+    directlik  = zeros(Float64, k,length(net.edge),ntrees)
     backwardlik= Array{Float64}(k,length(net.node),ntrees)
     #logtrans[i,j,e]; i = start_state, j = end_state, e = edge.number
-    log_tree_weights = Array{Float64,1}(length(trees))
     #Step 1
     ltw = Array{Float64,1}(length(trees))
     t = 0
@@ -148,16 +163,14 @@ function discrete_optimlikelihood(tips::Dict{String,Int64}, mod::TraitSubstituti
                 ltw[t] += log(e.gamma)
             end
         end
-        log_tree_weights[t] = ltw[t]
     end
     #Step 2
     logtrans = Array{Float64}(k,k,length(net.edge))
     for edge in net.edge
-        logtrans[:,:,edge.number] = log(P(mod,edge.length)) # element-wise
-        #fixit depriciation warning
+        logtrans[:,:,edge.number] = log.(P(mod,edge.length)) # element-wise
     end
     #Step 3
     discrete_corelikelihood(tips,mod,trees,ltw,logtrans,forwardlik,directlik,backwardlik)
     #fixme: add optimization routine
-    return
+    #fixme: return final likelihood
 end
