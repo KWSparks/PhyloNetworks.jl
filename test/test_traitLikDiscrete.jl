@@ -94,36 +94,42 @@ end
 
 end
 
-@testset "Testing on network with no hybridizations" begin
-
+@testset "Test discrete likelihood, fixed parameters" begin
+# test on a tree
 net = readTopology("(A:3.0,(B:2.0,(C:1.0,D:1.0):1.0):1.0);")
 tips = Dict("A" => 1, "B" => 1, "C" => 2, "D" => 2)
-# fixit try with with wrapper function that takes formats
-m1 = EqualRatesSubstitutionModel(2,1.0)
-#m1 = BinaryTraitSubstitutionModel(1.0,2.0)
 
-# discrete likelihood calculated using the R library phytools
+# the likelihood was calculated using the R library ape:
+if false
 R"""
-library(phytools)
 mytree <- read.tree(text = "(A:3.0,(B:2.0,(C:1.0,D:1.0):1.0):1.0);")
 states = matrix(c(1,1,2,2),nrow=1,ncol=4)
 fitER <- ace(states,mytree,model="ER",type="discrete")
-a <- fitER$loglik
+print(fitER$loglik, digits=17)
+print(fitER$rates, digits=17)
+print(fitER$lik.anc, digits=17)
 """
+end
+# log-likelihood = -1.9706530878326345 when both
+# rates = 0.3743971742794559
+# posterior probabilities of states at nodes: 3x2 matrix (3 internal nodes, 2 states)
+# later: use library(phytools) for the likelihood of 2 correlated binary traits
 
-@rget a
-
+m1 = EqualRatesSubstitutionModel(2,0.3743971742794559)
+m1 = BinaryTraitSubstitutionModel(0.3743971742794559,0.3743971742794559)
 PhyloNetworks.discrete_optimlikelihood(tips, m1, net)
 
-@test PhyloNetworks.discrete_optimlikelihood(tips, m1, net) == a
+@test PhyloNetworks.discrete_optimlikelihood(tips, m1, net) ≈ -1.9706530878326345
 
-end #testset for tree
-
-@testset "Testing on network with single hybridization" begin
-
+# test on a network, 1 hybridization
 net = readTopology("(((A:4.0,(B:1.0)#H1:1.1::0.9):0.5,(C:0.6,#H1:1.0::0.1):1.0):3.0,D:5.0);")
 tips = Dict("A" => 0, "B" => 0, "C" => 1, "D" => 1)
 
 PhyloNetworks.discrete_optimlikelihood(tips, m1, net)
 
-end #end of testset for networks with single hybridization
+# fixit test with with wrapper function that takes formats
+
+end # end of testset, fixed parameters
+
+@testset "Test discrete likelihood optimization, fixed topology" begin
+end

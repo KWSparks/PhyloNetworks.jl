@@ -8,35 +8,39 @@ starting states.
 function discrete_tree_corelikelihood(tree::HybridNetwork, tips::Dict{String,Int64},
     logtrans::AbstractArray, forwardlik::AbstractArray, directlik::AbstractArray)
     k=size(logtrans)[1]
+    @show logtrans
     for ni in reverse(1:length(tree.nodes_changed)) # post-order
         n = tree.nodes_changed[ni]
+        @show ni
+        @show n
         if n.leaf
-            # assumes that forwardlik was initialized at 0.0
+            # assumes that forwardlik was initialized at 0.
+            # keep it at 0. = log(1.) if no data
             tiplabel = n.name
             if haskey(tips, tiplabel)
                 for i in 1:k
-                    forwardlik[i,ni] = -Inf64
+                    forwardlik[i,ni] = -Inf64 # log(0) = -Inf if i != observed state
                 end
                 forwardlik[tips[n.name], ni] = 0.
             end
-        else
+        else # foward likelihood = product of direct likelihood over all children edges
             for e in n.edge
-                if n == getParent(e) 
-                    continue
-                end
-                # excluded parent edges only: assuming tree here
+                n == getParent(e) || continue # to next edge if n is not parent of e
                 forwardlik[:,ni] += directlik[:,e.number]
             end
         end
+        @show forwardlik[:,ni]
         if ni==1 # root is first index in nodes changed
             logprior = [-log(k) for i in 1:k] # uniform prior; could be changed later based on user input
             loglik = logprior[1] + forwardlik[1,ni] # log of prob of data AND root in state 1
             for i in 2:k
                 loglik = logsumexp(loglik, logprior[i] + forwardlik[i,ni])
+                @show loglik
             end
             return loglik
         end
-        # if we keep going: not the root
+        # if we keep going: n is not the root
+        # calculate direct likelihood on the parent edge of n
         for e in n.edge
             if n == getChild(e)
                 lt = view(logtrans, :,:,e.number)
@@ -47,6 +51,8 @@ function discrete_tree_corelikelihood(tree::HybridNetwork, tips::Dict{String,Int
                         directlik[i,e.number] = logsumexp(directlik[i,e.number],tmp)
                     end
                 end
+                @show e
+                @show directlik[:,e.number]
                 break # we visited the parent edge: break out of for loop
             end
         end
