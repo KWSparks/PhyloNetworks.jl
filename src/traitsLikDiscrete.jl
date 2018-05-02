@@ -68,6 +68,7 @@ function discrete_tree_core_ancestralstate(tree::HybridNetwork, tips::Dict{Strin
     backwardlik::AbstractArray)
     #fixit pass k from k=nStates(mod)
     k=size(logtrans)[1]
+    logprior = [-log(k) for i in 1:k]
     for n in tree.nodes_changed
         if n.root
             backwardlik[:,n] = logprior # fixit: log prior is not yet defined
@@ -88,7 +89,6 @@ function discrete_tree_core_ancestralstate(tree::HybridNetwork, tips::Dict{Strin
             end
         end
     end
-    return loglik
 end
 
 """
@@ -115,7 +115,6 @@ function discrete_corelikelihood(tips::Dict{String,Int64}, mod::TraitSubstitutio
     #ll = pmap(f, 1:length(trees)) # ll = loglikelihood given each tree
     @show ll
     res = ll[1] + ltw[1] # result: loglikelihood given the network
-    @show ltw[1]
     @show res
     for t in 2:length(trees)
         res = logsumexp(res, ll[t] + ltw[t])

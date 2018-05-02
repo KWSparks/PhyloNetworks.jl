@@ -98,10 +98,24 @@ end
 
 net = readTopology("(A:3.0,(B:2.0,(C:1.0,D:1.0):1.0):1.0);")
 tips = Dict("A" => 1, "B" => 1, "C" => 2, "D" => 2)
-# fixit try with with wrapper function that takes formats 
-m1 = BinaryTraitSubstitutionModel(1.0,2.0)
+# fixit try with with wrapper function that takes formats
+m1 = EqualRatesSubstitutionModel(2,1.0)
+#m1 = BinaryTraitSubstitutionModel(1.0,2.0)
+
+# discrete likelihood calculated using the R library phytools
+R"""
+library(phytools)
+mytree <- read.tree(text = "(A:3.0,(B:2.0,(C:1.0,D:1.0):1.0):1.0);")
+states = matrix(c(1,1,2,2),nrow=1,ncol=4)
+fitER <- ace(states,mytree,model="ER",type="discrete")
+a <- fitER$loglik
+"""
+
+@rget a
 
 PhyloNetworks.discrete_optimlikelihood(tips, m1, net)
+
+@test PhyloNetworks.discrete_optimlikelihood(tips, m1, net) == a
 
 end #testset for tree
 
