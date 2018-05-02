@@ -120,6 +120,15 @@ m1 = BinaryTraitSubstitutionModel(0.3743971742794559,0.3743971742794559)
 PhyloNetworks.discrete_optimlikelihood(tips, m1, net)
 
 @test PhyloNetworks.discrete_optimlikelihood(tips, m1, net) ≈ -1.9706530878326345
+@test PhyloNetworks.discrete_optimlikelihood(tips, m1, net) == a
+
+tips = Dict("A" => "KW", "B" => "WW", "C" => "SK", "D" => "KK")
+
+tips = Dict("A" => 0, "B" => 1, "C" => 4, "D" => 5)
+
+end #testset for tree
+
+@testset "Testing on network with single hybridization" begin
 
 # test on a network, 1 hybridization
 net = readTopology("(((A:4.0,(B:1.0)#H1:1.1::0.9):0.5,(C:0.6,#H1:1.0::0.1):1.0):3.0,D:5.0);")
