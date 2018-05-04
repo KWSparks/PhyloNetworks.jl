@@ -32,7 +32,9 @@ function discrete_tree_corelikelihood(tree::HybridNetwork, tips::Dict{String,Int
         @show forwardlik[:,ni]
         if ni==1 # root is first index in nodes changed
             logprior = [-log(k) for i in 1:k] # uniform prior; could be changed later based on user input
+            @show logprior
             loglik = logprior[1] + forwardlik[1,ni] # log of prob of data AND root in state 1
+            @show loglik
             for i in 2:k
                 loglik = logsumexp(loglik, logprior[i] + forwardlik[i,ni])
                 @show loglik
@@ -70,8 +72,7 @@ Ancestral state reconstruction at node n
 """
 
 function discrete_tree_core_ancestralstate(tree::HybridNetwork, tips::Dict{String,Int64},
-    logtrans::AbstractArray, forwardlik::AbstractArray, directlik::AbstractArray,
-    backwardlik::AbstractArray)
+    logtrans::AbstractArray, backwardlik::AbstractArray)
     #fixit pass k from k=nStates(mod)
     k=size(logtrans)[1]
     logprior = [-log(k) for i in 1:k]
@@ -95,6 +96,7 @@ function discrete_tree_core_ancestralstate(tree::HybridNetwork, tips::Dict{Strin
             end
         end
     end
+    return backwardlik
 end
 
 """
@@ -155,7 +157,7 @@ function discrete_optimlikelihood(tips::Dict{String,Int64}, mod::TraitSubstituti
     # fixit: later change the arrays below into SharedArray
     forwardlik = zeros(Float64, k,length(net.node),ntrees)
     directlik  = zeros(Float64, k,length(net.edge),ntrees)
-    backwardlik= Array{Float64}(k,length(net.node),ntrees)
+    backwardlik= zeros(Float64, k,length(net.node),ntrees)
     #logtrans[i,j,e]; i = start_state, j = end_state, e = edge.number
     #Step 1
     ltw = Array{Float64,1}(length(trees))
@@ -178,4 +180,48 @@ function discrete_optimlikelihood(tips::Dict{String,Int64}, mod::TraitSubstituti
     discrete_corelikelihood(tips,mod,trees,ltw,logtrans,forwardlik,directlik,backwardlik)
     #fixme: add optimization routine
     #fixme: return final likelihood
+end
+
+"""
+consecutive_tips(tips)
+
+Organize dictionaries into consecutive integers
+"""
+
+function consecutive_tips(tips::Dict)
+    newLabels = Dict{Any,Int64}()
+    orderedTips = sort(collect(zip(values(tips),keys(tips))))
+    t = 1 #consecutive integer
+    for i in 1:length(keys(tips))
+        if i==1
+            newLabels[orderedTips[i][2]] = t
+        else
+            if orderedTips[i][1] == orderedTips[i-1][1]
+                newLabels[orderedTips[i][2]] = t
+            else
+                t+=1
+                newLabels[orderedTips[i][2]] = t
+            end
+        end
+    end
+    return newLabels
+end
+
+function readDataFrameToDict(filename::String)
+    tmp = CSV.read(filename)
+    tipLabels = Array{String}(0)
+    tipStates = Array{Any}(0)
+    tips = Dict{Any,Any}()
+    for i in tmp[1]
+        push!(tipLabels, i)
+    end
+    for i in tmp[2]
+        push!(tipStates, i)
+    end
+    length(tipLabels) == length(tipStates) || 
+        error("number of tips does not match number of states")
+    for i in 1:length(tipLabels)
+        tips[tipLabels[i]] = tipStates[i]
+    end
+    return tips
 end
