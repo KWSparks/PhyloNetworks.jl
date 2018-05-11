@@ -138,6 +138,9 @@ PhyloNetworks.discrete_optimlikelihood(tips, m1, net)
 
 # fixit test with with wrapper function that takes formats
 
+tips = Dict("A" => 0, "B" => 0, "C" => 1, "D" => 1)
+@test PhyloNetworks.consecutive_tips(tips) == Dict("A" => 1, "B" => 1, "C" => 2, "D" => 2)
+
 end # end of testset, fixed parameters
 
 @testset "Test discrete likelihood optimization, fixed topology" begin
