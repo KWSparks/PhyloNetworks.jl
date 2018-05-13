@@ -255,8 +255,12 @@ function consecutive_tips(tips::Dict)
     return newLabels
 end
 
-function readDataFrameToDict(filename::String)
+function readDataFrameStates(filename::String)
     tmp = CSV.read(filename)
+    DataFrameToDict(tmp)
+end
+
+function DataFrameToDict(tmp::DataFrame)
     tipLabels = Array{String}(0)
     tipStates = Array{Any}(0)
     tips = Dict{Any,Any}()
@@ -271,5 +275,6 @@ function readDataFrameToDict(filename::String)
     for i in 1:length(tipLabels)
         tips[tipLabels[i]] = tipStates[i]
     end
+    tips = PhyloNetworks.consecutive_tips(tips)
     return tips
 end
