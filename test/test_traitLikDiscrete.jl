@@ -99,36 +99,34 @@ end
 net = readTopology("(A:3.0,(B:2.0,(C:1.0,D:1.0):1.0):1.0);")
 tips = Dict("A" => 1, "B" => 1, "C" => 2, "D" => 2)
 
-# the likelihood was calculated using the R library ape:
 if false
+# likelihood calculated in R, first with ace() then with fitDiscrete():
 R"""
+library(ape)
 mytree <- read.tree(text = "(A:3.0,(B:2.0,(C:1.0,D:1.0):1.0):1.0);")
 states = matrix(c(1,1,2,2),nrow=1,ncol=4)
 fitER <- ace(states,mytree,model="ER",type="discrete")
-print(fitER$loglik, digits=17)
-print(fitER$rates, digits=17)
-print(fitER$lik.anc, digits=17)
+print(fitER$loglik, digits=17) # log-likelihood = -1.9706530878326345
+print(fitER$rates, digits=17)  # rates = 0.3743971742794559
+print(fitER$lik.anc, digits=17)# posterior probs of states at nodes: 3x2 matrix (3 internal nodes, 2 states)
+# BUT: different results when using fitDiscrete() in geiger
+library(geiger)
+states = c(1,1,2,2)
+names(states)  = mytree$tip.label
+fitER = fitDiscrete(mytree, states, model="ER")
+print(fitER$opt$q12, digits=17) # rates = 0.36836216513047726
+print(fitER$opt$lnL, digits=17) # log-likelihood = -2.6626566310743804
 """
 end
-# log-likelihood = -1.9706530878326345 when both
-# rates = 0.3743971742794559
-# posterior probabilities of states at nodes: 3x2 matrix (3 internal nodes, 2 states)
 # later: use library(phytools) for the likelihood of 2 correlated binary traits
 
-m1 = EqualRatesSubstitutionModel(2,0.3743971742794559)
-m1 = BinaryTraitSubstitutionModel(0.3743971742794559,0.3743971742794559)
-PhyloNetworks.discrete_optimlikelihood(tips, m1, net)
-
-@test PhyloNetworks.discrete_optimlikelihood(tips, m1, net) ≈ -1.9706530878326345
-@test PhyloNetworks.discrete_optimlikelihood(tips, m1, net) == a
+m1 = EqualRatesSubstitutionModel(2,0.36836216513047726)
+m1 = BinaryTraitSubstitutionModel(0.36836216513047726,0.36836216513047726)
+@test PhyloNetworks.discrete_optimlikelihood(tips, m1, net) ≈ -2.6626566310743804 atol=1e-2
 
 tips = Dict("A" => "KW", "B" => "WW", "C" => "SK", "D" => "KK")
 
 tips = Dict("A" => 0, "B" => 1, "C" => 4, "D" => 5)
-
-end #testset for tree
-
-@testset "Testing on network with single hybridization" begin
 
 # test on a network, 1 hybridization
 net = readTopology("(((A:4.0,(B:1.0)#H1:1.1::0.9):0.5,(C:0.6,#H1:1.0::0.1):1.0):3.0,D:5.0);")
