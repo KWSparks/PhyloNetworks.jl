@@ -124,10 +124,6 @@ m1 = EqualRatesSubstitutionModel(2,0.36836216513047726)
 m1 = BinaryTraitSubstitutionModel(0.36836216513047726,0.36836216513047726)
 @test PhyloNetworks.discrete_optimlikelihood(tips, m1, net) ≈ -2.6626566310743804 atol=1e-2
 
-tips = Dict("A" => "KW", "B" => "WW", "C" => "SK", "D" => "KK")
-
-tips = Dict("A" => 0, "B" => 1, "C" => 4, "D" => 5)
-
 # test on a network, 1 hybridization
 net = readTopology("(((A:4.0,(B:1.0)#H1:1.1::0.9):0.5,(C:0.6,#H1:1.0::0.1):1.0):3.0,D:5.0);")
 tips = Dict("A" => 0, "B" => 0, "C" => 1, "D" => 1)
@@ -136,10 +132,10 @@ net = readTopology("(A:1.0,B:1.0);")
 
 PhyloNetworks.discrete_optimlikelihood(tips, m1, net)
 
-# fixit test with with wrapper function that takes formats
+# wrapper function that takes Dataframe formats, converts to Dictionaries
 
-tips = Dict("A" => 0, "B" => 0, "C" => 1, "D" => 1)
-@test PhyloNetworks.consecutive_tips(tips) == Dict("A" => 1, "B" => 1, "C" => 2, "D" => 2)
+test = DataFrame(species = ["A","B","C","D"], trait = [1,1,2,2,])
+@test PhyloNetworks.DataFrameToDict(test) == Dict("A" => 1, "B" => 1, "C" => 2, "D" => 2)
 
 end # end of testset, fixed parameters
 
