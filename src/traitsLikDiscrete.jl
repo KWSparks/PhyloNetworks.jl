@@ -1,8 +1,8 @@
 """
     discrete_tree_corelikelihood(tree, tips, logtrans, forwardlik, directlik)
 
-Calculate likelihood of discrete character states on a phylogenetic network given
-starting states.
+Calculate likelihood of discrete character states on a phylogenetic tree. Designed for 
+use inside the `discrete_optimlikelihood` function.
 
 """
 function discrete_tree_corelikelihood(tree::HybridNetwork, tips::Dict{String,Int64},
@@ -73,7 +73,8 @@ end
     function discrete_tree_core_ancestralstate(tree, tips, logtrans, forwardlik, 
         directlik, backwardlik)
 
-Ancestral state reconstruction at node n
+Calculate ancestral state reconstruction at node n for each tree in a 
+reticulated network.
 
 # Examples
 
@@ -111,9 +112,8 @@ end
         logtrans,forwardlik,directlik,backwardlik)
 
 Calculate likelihood for discrete characters on a network,
-using fixed model parameters
-
-# Examples
+given the likelihood of each tree in the network. Designed for use inside
+the `discrete_optimlikelihood` function.
 
 """
 
@@ -132,7 +132,6 @@ function discrete_corelikelihood(tips::Dict{String,Int64}, mod::TraitSubstitutio
     res = ll[1] + ltw[1] # result: loglikelihood given the network
     @show res
     for t in 2:length(trees)
-        println("hi")
         res = logsumexp(res, ll[t] + ltw[t])
     end
     return res
@@ -142,9 +141,11 @@ end
     discrete_optimlikelihood(tips, mod, net, NLoptMethod=:LD_MMA,
         ftolRel=1e-12, ftolAbs=1e-8, xtolRel=1e-10, xtolAbs=1e-10)
 
-Calculate likelihood of discrete character states on a reticulate network.
+Calculate optimized likelihood of a reticulate network given a
+dictionary of discrete character states at the tips, 
+a continous time Markov model, and a network.
 
-Tips should have values that are consecutive numbers.
+Assumes discrete character states are consecutive integers starting from 1.
 
 optional arguments (default):
 - checkPreorder (true)
@@ -154,6 +155,12 @@ Other options include :LN_COBYLA (derivative-free); see NLopt package.
   ftolRel (1e-12), ftolAbs (1e-10) on the criterion, and
   xtolRel (1e-10), xtolAbs (1e-10)
 
+# Examples:
+
+julia-repl> net = readTopology("(A:3.0,(B:2.0,(C:1.0,D:1.0):1.0):1.0);")
+julia-repl> tips = Dict("A" => 1, "B" => 1, "C" => 2, "D" => 2)
+julia-repl> PhyloNetworks.discrete_optimlikelihood(tips, m1, net)
+res = -2.6638637960257583
 """
 
 function discrete_optimlikelihood(tips::Dict{String,Int64}, mod::TraitSubstitutionModel, net::HybridNetwork;
@@ -163,7 +170,6 @@ function discrete_optimlikelihood(tips::Dict{String,Int64}, mod::TraitSubstituti
     trees = displayedTrees(net, 0.0)
     @show trees
     for tree in trees
-        println("hello There")
         preorder!(tree)
         directEdges!(tree)
     end  
@@ -233,7 +239,17 @@ end
 """
 consecutive_tips(tips)
 
-Organize dictionaries into consecutive integers
+Modify dictionary states into consecutive positive integers starting from 1.
+
+# Examples
+
+julia-repl> tips = Dict("A" => 0, "B" => 0, "C" => 1, "D" => 1)
+julia-repl> consecutive_tips(tips)
+Dict{Any,Int64} with 4 entries:
+  "B" => 1
+  "A" => 1
+  "C" => 2
+  "D" => 2
 """
 
 function consecutive_tips(tips::Dict)
@@ -255,10 +271,40 @@ function consecutive_tips(tips::Dict)
     return newLabels
 end
 
-function readDataFrameStates(filename::String)
+function readDataFrametoDict(filename::String)
     tmp = CSV.read(filename)
     DataFrameToDict(tmp)
 end
+
+"""
+DataFrameToDict(tmp)
+
+Convert DataFrame of character states for leaves of a given phylogenetic 
+network into a dictionary of leaf names as keys and leaf states as consecutive integers
+beginning from 1.
+
+Assumes data frame for a single trait, in which case the taxon names
+are to appear in column 1 or in a column named "taxon" or "species", and
+trait values are to appear in column 2 or in a column named "trait".
+
+# Examples
+julia-repl> tmp = DataFrame(species = ["A","B","C","D"], trait = [1,1,2,2,])
+4×2 DataFrames.DataFrame
+│ Row │ species │ trait │
+├─────┼─────────┼───────┤
+│ 1   │ A       │ 1     │
+│ 2   │ B       │ 1     │
+│ 3   │ C       │ 2     │
+│ 4   │ D       │ 2     │
+julia-repl> DataFrameToDict(tmp)
+Dict{Any,Int64} with 4 entries:
+  "B" => 1
+  "A" => 1
+  "C" => 2
+  "D" => 2
+
+"""
+
 
 function DataFrameToDict(tmp::DataFrame)
     tipLabels = Array{String}(0)

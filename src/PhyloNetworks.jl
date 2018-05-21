@@ -124,7 +124,10 @@ module PhyloNetworks
         Q, P,
         randomTrait,
         randomTrait!,
-        addBL
+        addBL,
+        discrete_optimlikelihood,
+        readDataFrameStates,
+        DataFrameToDict
 
     include("types.jl")
     include("auxiliary.jl")

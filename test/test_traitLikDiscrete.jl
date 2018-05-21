@@ -94,13 +94,23 @@ end
 
 end
 
+@testset "Test wrapper functions for DataFrames" begin
+
+# wrapper function that takes Dataframe formats, converts to Dictionaries
+
+test = DataFrame(species = ["A","B","C","D"], trait = [1,1,2,2,])
+@test PhyloNetworks.DataFrameToDict(test) == Dict("A" => 1, "B" => 1, "C" => 2, "D" => 2)
+
+end #end of testset for wrapper functions
+
 @testset "Test discrete likelihood, fixed parameters" begin
 # test on a tree
 net = readTopology("(A:3.0,(B:2.0,(C:1.0,D:1.0):1.0):1.0);")
 tips = Dict("A" => 1, "B" => 1, "C" => 2, "D" => 2)
 
 if false
-# likelihood calculated in R, first with ace() then with fitDiscrete():
+# likelihood calculated in R, first with ace() then with fitDiscrete(), then with
+#fitMK using a fixed Q matrix:
 R"""
 library(ape)
 mytree <- read.tree(text = "(A:3.0,(B:2.0,(C:1.0,D:1.0):1.0):1.0);")
@@ -116,26 +126,25 @@ names(states)  = mytree$tip.label
 fitER = fitDiscrete(mytree, states, model="ER")
 print(fitER$opt$q12, digits=17) # rates = 0.36836216513047726
 print(fitER$opt$lnL, digits=17) # log-likelihood = -2.6626566310743804
+# Different results with fitMK using fixed Q Matrix obtained from fitDiscrete
+library(phytools)
+tipvals = matrix(c(1,1,2,2,2,2,1,1), ncol=2, dimnames = list(c("A", "B", "C", "D"), c("1", "2")))
+Q2 = matrix(c(-1,1,1,-1),2,2)*fit1$opt$q12
+fit2 = fitMk(mytree, states, model="ER", fixedQ=Q2)
+print(fit2$logLik, digits=17) # log-likelihood = -2.6638637960257574
 """
 end
+
 # later: use library(phytools) for the likelihood of 2 correlated binary traits
 
 m1 = EqualRatesSubstitutionModel(2,0.36836216513047726)
 m1 = BinaryTraitSubstitutionModel(0.36836216513047726,0.36836216513047726)
-@test PhyloNetworks.discrete_optimlikelihood(tips, m1, net) ≈ -2.6626566310743804 atol=1e-2
+#@test PhyloNetworks.discrete_optimlikelihood(tips, m1, net) ≈ -2.6626566310743804 atol=1e-2
+@test PhyloNetworks.discrete_optimlikelihood(tips, m1, net) ≈-2.6638637960257574
 
 # test on a network, 1 hybridization
 net = readTopology("(((A:4.0,(B:1.0)#H1:1.1::0.9):0.5,(C:0.6,#H1:1.0::0.1):1.0):3.0,D:5.0);")
-tips = Dict("A" => 0, "B" => 0, "C" => 1, "D" => 1)
-
-net = readTopology("(A:1.0,B:1.0);")
-
-PhyloNetworks.discrete_optimlikelihood(tips, m1, net)
-
-# wrapper function that takes Dataframe formats, converts to Dictionaries
-
-test = DataFrame(species = ["A","B","C","D"], trait = [1,1,2,2,])
-@test PhyloNetworks.DataFrameToDict(test) == Dict("A" => 1, "B" => 1, "C" => 2, "D" => 2)
+tips = Dict("A" => 1, "B" => 1, "C" => 2, "D" => 2)
 
 end # end of testset, fixed parameters
 
