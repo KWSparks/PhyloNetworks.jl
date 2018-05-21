@@ -73,8 +73,8 @@ end
     function discrete_tree_core_ancestralstate(tree, tips, logtrans, forwardlik, 
         directlik, backwardlik)
 
-Calculate ancestral state reconstruction at node n for each tree in a 
-reticulated network.
+Estimates ancestral states for discrete characters for each tree in a 
+reticulated network. Designed to be used within the `discrete_optimliklihood function.`
 
 # Examples
 
