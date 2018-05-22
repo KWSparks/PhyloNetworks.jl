@@ -128,8 +128,7 @@ print(fitER$opt$q12, digits=17) # rates = 0.36836216513047726
 print(fitER$opt$lnL, digits=17) # log-likelihood = -2.6626566310743804
 # Different results with fitMK using fixed Q Matrix obtained from fitDiscrete
 library(phytools)
-tipvals = matrix(c(1,1,2,2,2,2,1,1), ncol=2, dimnames = list(c("A", "B", "C", "D"), c("1", "2")))
-Q2 = matrix(c(-1,1,1,-1),2,2)*fit1$opt$q12
+Q2 = matrix(c(-1,1,1,-1),2,2)*fitER$opt$q12
 fit2 = fitMk(mytree, states, model="ER", fixedQ=Q2)
 print(fit2$logLik, digits=17) # log-likelihood = -2.6638637960257574
 """
